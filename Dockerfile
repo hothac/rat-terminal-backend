@@ -1,13 +1,23 @@
 FROM python:3.10-slim
 
-# Linux paketlərini (nmap, gobuster, whois, dnsutils, curl, net-tools) quraşdırırıq
+# Əsas Linux və kiber təhlükəsizlik alətlərini quraşdırırıq
 RUN apt-get update && apt-get install -y \
+    bash \
     nmap \
     gobuster \
     whois \
     dnsutils \
     curl \
+    wget \
     net-tools \
+    iputils-ping \
+    nikto \
+    sqlmap \
+    hydra \
+    john \
+    git \
+    vim \
+    nano \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
