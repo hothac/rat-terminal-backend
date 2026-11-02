@@ -11,14 +11,17 @@ app = FastAPI()
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
     
-    # Hər istifadəçi üçün ayrıca interaktiv bash prosesi və PTY açırıq
+    # PTY boyutlarını tanımlıyoruz
     master, slave = pty.openpty()
+    
+    # bash kabuğunu --noediting ve tty modunda başlatıyoruz
     proc = await asyncio.create_subprocess_exec(
-        '/bin/bash',
+        '/bin/bash', '--login',
         stdin=slave,
         stdout=slave,
         stderr=slave,
-        close_fds=True
+        close_fds=True,
+        env={**os.environ, "TERM": "xterm-256color", "PS1": "\\u@cyber-hub:\\w$ "}
     )
     os.close(slave)
 
