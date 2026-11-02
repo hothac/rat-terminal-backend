@@ -1,20 +1,15 @@
 FROM python:3.10-slim
 
-# Əsas Linux və kiber təhlükəsizlik alətlərini quraşdırırıq
-RUN apt-get update && apt-get install -y \
+# Yalnızca standart Debian depolarında bulunan temel ağ ve sistem araçlarını kuruyoruz
+RUN apt-get update && apt-get install -y --no-install-recommends \
     bash \
     nmap \
-    gobuster \
     whois \
     dnsutils \
     curl \
     wget \
     net-tools \
     iputils-ping \
-    nikto \
-    sqlmap \
-    hydra \
-    john \
     git \
     vim \
     nano \
