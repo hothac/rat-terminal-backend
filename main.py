@@ -6,8 +6,14 @@ import uvicorn
 
 app = FastAPI()
 
-# Cari işçi qovluğunu yadda saxlayırıq
+# Başlangıç dizini olarak uygulamanın çalıştığı yeri alıyoruz
 current_dir = os.getcwd()
+
+# Sistemde araçların arandığı standart PATH yollarını garantiliyoruz
+custom_env = {
+    **os.environ,
+    "PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:" + os.environ.get("PATH", "")
+}
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
@@ -18,7 +24,6 @@ async def websocket_endpoint(websocket: WebSocket):
         while True:
             raw_data = await websocket.receive_text()
             
-            # Gələn datanın JSON və ya düz string olmasını yoxlayırıq
             try:
                 cmd_data = json.loads(raw_data)
                 cmd = cmd_data.get("command", "").strip()
@@ -28,33 +33,45 @@ async def websocket_endpoint(websocket: WebSocket):
             if not cmd:
                 continue
 
-            # 'cd' əmrini idarə edirik
+            # 'cd' komutlarını gerçek dizin mantığı ile yönetiyoruz
             if cmd.startswith("cd ") or cmd == "cd":
                 new_dir = cmd[3:].strip() if len(cmd) > 2 else os.path.expanduser("~")
                 target_dir = os.path.abspath(os.path.join(current_dir, new_dir))
+                
                 if os.path.exists(target_dir) and os.path.isdir(target_dir):
                     current_dir = target_dir
-                    await websocket.send_text(f"Directory changed to: {current_dir}\n")
+                    # Ön yüze güncel dizini bildiriyoruz
+                    await websocket.send_text(json.dumps({
+                        "type": "cwd",
+                        "pwd": current_dir,
+                        "output": ""
+                    }))
                 else:
-                    await websocket.send_text(f"bash: cd: {new_dir}: No such file or directory\n")
+                    await websocket.send_text(json.dumps({
+                        "type": "output",
+                        "output": f"bash: cd: {new_dir}: No such file or directory\n"
+                    }))
                 continue
 
-            # Əmri sistemdə işə salırıq
+            # Komutu sistem ortam değişkenleri (PATH) ile çalıştırıyoruz
             proc = await asyncio.create_subprocess_shell(
                 cmd,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
-                cwd=current_dir
+                cwd=current_dir,
+                env=custom_env
             )
             
             stdout, stderr = await proc.communicate()
-            
             output = stdout.decode('utf-8', errors='ignore') if stdout else stderr.decode('utf-8', errors='ignore')
             
             if not output.strip():
-                output = "[+] Command executed with no output.\n"
+                output = "\n"
 
-            await websocket.send_text(output)
+            await websocket.send_text(json.dumps({
+                "type": "output",
+                "output": output
+            }))
 
     except WebSocketDisconnect:
         print("Client disconnected")
