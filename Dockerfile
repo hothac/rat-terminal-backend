@@ -1,6 +1,6 @@
 FROM python:3.10-slim
 
-# Yalnızca standart Debian depolarında bulunan temel ağ ve sistem araçlarını kuruyoruz
+# Əsas sistem paketləri və asılılıqları quraşdırırıq
 RUN apt-get update && apt-get install -y --no-install-recommends \
     bash \
     nmap \
@@ -13,7 +13,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     git \
     vim \
     nano \
+    gobuster \
     && rm -rf /var/lib/apt/lists/*
+
+# sqlmap-i rəsmi GitHub repozitoriyasından çəkirik
+RUN git clone --depth 1 https://github.com/sqlmapproject/sqlmap.git /opt/sqlmap \
+    && ln -s /opt/sqlmap/sqlmap.py /usr/local/bin/sqlmap
+
+# Əsas wordlist-ləri yaratmaq üçün daxili papka hazırlayırıq
+RUN mkdir -p /usr/share/wordlists/dirb \
+    && curl -s https://raw.githubusercontent.com/v0space/payloads/main/wordlists/common.txt -o /usr/share/wordlists/dirb/common.txt
 
 WORKDIR /app
 
